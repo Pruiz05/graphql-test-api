@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
+const Client = require("../models/Client");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config({ path: ".env" });
@@ -37,6 +38,40 @@ const resolvers = {
         return product;
       } catch (error) {}
     },
+    getClients: async () => {
+      try {
+        const clients = await Client.find({});
+
+      return clients;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    getClientByVendor: async (_, {}, context) => {
+      try {
+        const clients = await Client.find({vendor: context.user.id.toString()});
+        return clients;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    getClientById: async(_, { id }, context) => {
+      try {
+        const client = await Client.findById(id);
+
+        if (!client) {
+          throw new Error("El cliente consultado no existe");
+        }
+
+        if (client.vendor.toString() !== context.user.id) {
+          throw new Error('No autorizado para esta información')
+        }
+
+        return client;
+      } catch (error) {
+        console.log(error)
+      }
+    }
   },
   Mutation: {
     newUser: async (_, { input }) => {
@@ -120,12 +155,12 @@ const resolvers = {
           new: true,
         });
 
-        return product ;
+        return product;
       } catch (error) {
         console.log(error);
       }
     },
-    deleteProduct: async (_, {id}) => {
+    deleteProduct: async (_, { id }) => {
       try {
         let product = await Product.findById(id);
 
@@ -136,6 +171,72 @@ const resolvers = {
         await Product.findOneAndDelete( {_id: id});
 
         return "Producto eliminado";
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    newClient: async (_, {input}, context) => {
+      try {
+        const { email } = input
+        const client = await Client.findOne({email});
+
+        if (client) {
+          throw new Error('El Correo ya existe');
+        }
+
+        const newClient = new Client(input);
+
+        newClient.vendor = context.user.id;
+
+        const result =  await newClient.save();
+
+        return result;
+
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    updateClient: async (_, { id, input }, context) => {
+      try {
+        console.log(input)
+        let client = await Client.findById(id);
+
+        if (!client) {
+          throw new Error("El cliente consultado no existe");
+        }
+
+        // verificar si el vendedor es que edita
+        if (client.vendor.toString() !== context.user.id) {
+          throw new Error('No autorizado para esta información')
+        }
+
+        client = await Client.findOneAndUpdate({ _id: id }, input, {
+          new: true,
+        });
+
+        return client;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    deleteClient: async(_, {id}, context) => {
+      try {
+        
+        const client = await Client.findById(id);
+
+        if (!client) {
+          throw new Error('El Cliente no existe');
+        }
+
+        // verificar si el vendedor es que edita
+        if (client.vendor.toString() !== context.user.id) {
+          throw new Error('No autorizado para esta información')
+        }
+
+        await Client.findOneAndDelete({_id: id});
+
+        return 'Cliente Eliminado exitosamente';
+
       } catch (error) {
         console.log(error)
       }
