@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Product = require("../models/Product");
 const Client = require("../models/Client");
+const Order = require("../models/Order");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 require("dotenv").config({ path: ".env" });
@@ -236,6 +237,56 @@ const resolvers = {
         await Client.findOneAndDelete({_id: id});
 
         return 'Cliente Eliminado exitosamente';
+
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    newOrder: async (_, {input}, context) => {
+      try {
+        const { client } = input
+
+        // el cliente existe?
+        let clientExist = await Client.findById(client);
+
+        if (!clientExist) {
+          throw new Error("El cliente consultado no existe");
+        }
+
+        // el cliente pertenece al vendedor
+        if (clientExist.vendor.toString() !== context.user.id) {
+          throw new Error('No autorizado para esta información')
+        }
+
+        
+
+        // stock disponible
+        for await (const element of input.order){
+
+          const { id } = element;
+          const product = await Product.findById(id);
+  
+          console.log(product)
+  
+          if(element.quantity >= product.stock){
+            throw new Error(`El articulo ${product.name} excede la cantidad disponible.`)
+  
+          }else {
+            product.stock = product.stock - element.quantity;
+            await product.save();
+          }
+        }
+
+        // crear nuevo pedido
+        const newOrder = new Order(input)
+
+
+        // asignar vendedor
+        newOrder.vendor = context.user.id;
+
+        // guardar en la bd
+        const result = await newOrder.save();
+        return result;
 
       } catch (error) {
         console.log(error)
