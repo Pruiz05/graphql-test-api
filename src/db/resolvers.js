@@ -4,6 +4,7 @@ const Client = require("../models/Client");
 const Order = require("../models/Order");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { ProvidedRequiredArgumentsOnDirectivesRule } = require("graphql/validation/rules/ProvidedRequiredArgumentsRule");
 require("dotenv").config({ path: ".env" });
 
 const CreateToken = (user, secret, expiresIn) => {
@@ -69,6 +70,40 @@ const resolvers = {
         }
 
         return client;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    getOrders: async () => {
+      try {
+        const orders = await Order.find({})
+        return orders;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    getOrdersByVendor: async (_, {}, ctx) => {
+      try {
+        const orders = await Order.find({ vendor: ctx.user.id})
+        return orders;
+      } catch (error) {
+        console.log(error)
+      }
+    },
+    getOrderById: async (_, {id}, ctx) => {
+      try {
+        const order = await Order.findById(id);
+
+        if(!order){
+          throw new Error('Pedido No encontrado.');
+        }
+
+        if(order.vendor.toString() !== ctx.user.id){
+          throw new Error('No tiene las credenciales.');
+        }
+
+        return order;
+
       } catch (error) {
         console.log(error)
       }
@@ -258,8 +293,6 @@ const resolvers = {
           throw new Error('No autorizado para esta información')
         }
 
-        
-
         // stock disponible
         for await (const element of input.order){
 
@@ -291,7 +324,58 @@ const resolvers = {
       } catch (error) {
         console.log(error)
       }
-    }
+    },
+    updateOrder: async (_, { id, input }, ctx) => {
+      try {
+        const { client } = input
+
+        const order = await Order.findById(id);
+
+        // validarsi el pedido existe
+        if (!order) {
+          throw new Error("El pedido consultado no existe");
+        }
+
+        // validar si el cliente existe
+        const existClient = await Client.findById(client);
+
+        if (!existClient) {
+          throw new Error("El cliente no existe");
+        }
+
+        // validar si el cliente y el pedido pertenecen al vendedor
+        if (existClient.vendor.toString() !== ctx.user.id) {
+          throw new Error('No autorizado para esta información')
+        }
+        
+        // revisar el stock
+        for await (const element of input.order){
+
+          const { id } = element;
+          const product = await Product.findById(id);
+  
+          console.log(product)
+  
+          if(element.quantity >= product.stock){
+            throw new Error(`El articulo ${product.name} excede la cantidad disponible.`)
+  
+          }else {
+            product.stock = product.stock - element.quantity;
+            await product.save();
+          }
+        }
+
+
+        // save
+        const result = await Order.findOneAndUpdate({ _id: id }, input, {
+          new: true
+        });
+
+        return result;
+      } catch (error) {
+        console.log(error);
+      }
+    },
   },
 };
 
