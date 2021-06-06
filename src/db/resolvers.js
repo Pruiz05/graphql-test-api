@@ -36,7 +36,7 @@ const resolvers = {
         const product = await Product.findById(id);
 
         if (!product) {
-          throw new Error("El producto consultado no existe");
+          return Error("El producto consultado no existe");
         }
 
         return product;
@@ -66,11 +66,11 @@ const resolvers = {
         const client = await Client.findById(id);
 
         if (!client) {
-          throw new Error("El cliente consultado no existe");
+          return Error("El cliente consultado no existe");
         }
 
         if (client.vendor.toString() !== context.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         return client;
@@ -99,11 +99,11 @@ const resolvers = {
         const order = await Order.findById(id);
 
         if (!order) {
-          throw new Error("Pedido No encontrado.");
+          return Error("Pedido No encontrado.");
         }
 
         if (order.vendor.toString() !== ctx.user.id) {
-          throw new Error("No tiene las credenciales.");
+          return Error("No tiene las credenciales.");
         }
 
         return order;
@@ -119,7 +119,7 @@ const resolvers = {
         });
 
         if (!order) {
-          throw new Error("Pedido No encontrado.");
+          return Error("Pedido No encontrado.");
         }
 
         return order;
@@ -187,19 +187,19 @@ const resolvers = {
         console.log(error);
       }
     },
-    findProduct: async (_, {text}) => {
+    findProduct: async (_, { text }) => {
       try {
-        const products = await Product.find({ $text: { $search: text}})
+        const products = await Product.find({ $text: { $search: text } });
 
         if (products.length == 0) {
-          return new Error('Producto No encontrado')
+          return new Error("Producto No encontrado");
         }
 
-        return products
+        return products;
       } catch (error) {
-        console.log(error)
+        console.log(error);
       }
-    }
+    },
   },
   Mutation: {
     newUser: async (_, { input }) => {
@@ -210,10 +210,10 @@ const resolvers = {
       const userExist = await User.findOne({
         email,
       });
-
       if (userExist) {
-        throw new Error("El Usuario ya está registrado.");
+        return Error("El Usuario ya está registrado.");
       }
+      console.log("...");
 
       // hashear pass
       const salt = await bcryptjs.genSalt(10);
@@ -241,7 +241,7 @@ const resolvers = {
       });
 
       if (!userExist) {
-        throw new Error("El usuario no existe");
+        return Error("El usuario no existe");
       }
 
       // validar si el password es correcti
@@ -250,7 +250,7 @@ const resolvers = {
         userExist.password
       );
       if (!correctPassword) {
-        throw new Error("Usuario y/o Contraseña incorrectos.");
+        return Error("Usuario y/o Contraseña incorrectos.");
       }
       // Crear token
       return {
@@ -276,7 +276,7 @@ const resolvers = {
         let product = await Product.findById(id);
 
         if (!product) {
-          throw new Error("El producto consultado no existe");
+          return Error("El producto consultado no existe");
         }
 
         product = await Product.findOneAndUpdate({ _id: id }, input, {
@@ -293,7 +293,7 @@ const resolvers = {
         let product = await Product.findById(id);
 
         if (!product) {
-          throw new Error("El producto consultado no existe");
+          return Error("El producto consultado no existe");
         }
 
         await Product.findOneAndDelete({ _id: id });
@@ -309,7 +309,7 @@ const resolvers = {
         const client = await Client.findOne({ email });
 
         if (client) {
-          throw new Error("El Correo ya existe");
+          return Error("El Correo ya existe");
         }
 
         const newClient = new Client(input);
@@ -329,12 +329,12 @@ const resolvers = {
         let client = await Client.findById(id);
 
         if (!client) {
-          throw new Error("El cliente consultado no existe");
+          return Error("El cliente consultado no existe");
         }
 
         // verificar si el vendedor es que edita
         if (client.vendor.toString() !== context.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         client = await Client.findOneAndUpdate({ _id: id }, input, {
@@ -351,12 +351,12 @@ const resolvers = {
         const client = await Client.findById(id);
 
         if (!client) {
-          throw new Error("El Cliente no existe");
+          return Error("El Cliente no existe");
         }
 
         // verificar si el vendedor es que edita
         if (client.vendor.toString() !== context.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         await Client.findOneAndDelete({ _id: id });
@@ -374,12 +374,12 @@ const resolvers = {
         let clientExist = await Client.findById(client);
 
         if (!clientExist) {
-          throw new Error("El cliente consultado no existe");
+          return Error("El cliente consultado no existe");
         }
 
         // el cliente pertenece al vendedor
         if (clientExist.vendor.toString() !== context.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         // stock disponible
@@ -390,7 +390,7 @@ const resolvers = {
           console.log(product);
 
           if (element.quantity >= product.stock) {
-            throw new Error(
+            return Error(
               `El articulo ${product.name} excede la cantidad disponible.`
             );
           } else {
@@ -420,19 +420,19 @@ const resolvers = {
 
         // validar si el pedido existe
         if (!order) {
-          throw new Error("El pedido consultado no existe");
+          return Error("El pedido consultado no existe");
         }
 
         // validar si el cliente existe
         const existClient = await Client.findById(client);
 
         if (!existClient) {
-          throw new Error("El cliente no existe");
+          return Error("El cliente no existe");
         }
 
         // validar si el cliente y el pedido pertenecen al vendedor
         if (existClient.vendor.toString() !== ctx.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         // revisar el stock
@@ -443,7 +443,7 @@ const resolvers = {
           console.log(product);
 
           if (element.quantity >= product.stock) {
-            throw new Error(
+            return Error(
               `El articulo ${product.name} excede la cantidad disponible.`
             );
           } else {
@@ -468,11 +468,11 @@ const resolvers = {
 
         // validar si el pedido existe
         if (!order) {
-          throw new Error("El pedido consultado no existe");
+          return Error("El pedido consultado no existe");
         }
 
         if (order.vendor.toString() !== ctx.user.id) {
-          throw new Error("No autorizado para esta información");
+          return Error("No autorizado para esta información");
         }
 
         await Order.findByIdAndDelete({ _id: id });
