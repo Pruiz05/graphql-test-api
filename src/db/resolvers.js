@@ -18,9 +18,9 @@ const CreateToken = (user, secret, expiresIn) => {
 const resolvers = {
   Query: {
     // obtenerCursos: () => "Hello World",
-    getUser: async (_, { token }) => {
-      const userId = await jwt.verify(token, process.env.SECRET_TOKEN);
-      return userId;
+    getUser: async (_, {}, ctx) => {
+      // const userId = await jwt.verify(ctx, process.env.SECRET_TOKEN);
+      return ctx.user;
     },
     getProducts: async () => {
       try {
@@ -53,8 +53,16 @@ const resolvers = {
     },
     getClientByVendor: async (_, {}, context) => {
       try {
+        // console.log(context.user == undefined);
+
+        let vendor;
+        if (context.user == undefined) {
+          return 
+        } else {
+          vendor = context.user.id.toString();
+        }
         const clients = await Client.find({
-          vendor: context.user.id.toString(),
+          vendor: vendor,
         });
         return clients;
       } catch (error) {
@@ -241,7 +249,7 @@ const resolvers = {
       });
 
       if (!userExist) {
-        return Error("El usuario no existe");
+        return Error("Usuario y/o Contraseña incorrectos");
       }
 
       // validar si el password es correcti
